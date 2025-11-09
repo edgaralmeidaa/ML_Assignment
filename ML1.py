@@ -1,7 +1,7 @@
 '''
 Milestone 1: Data Preparation for Machine Learning
 This script implements comprehensive data cleaning, transformation, and pipeline creation
-for bank transaction fraud detection.
+for heart disease prediction.
 '''
 
 import numpy as np
@@ -16,33 +16,46 @@ from sklearn.compose import ColumnTransformer
 from sklearn.base import BaseEstimator, TransformerMixin
 
 
-bank_df = pd.read_csv("bank_transactions.csv")
-target_column = ''  # when we choose the dataset we need to put the name of the target column here
+heart_df = pd.read_csv("heart.csv")
+target_column = 'HeartDisease'  # when we choose the dataset we need to put the name of the target column here
 print('\n--- Dataset Overview ---')
-print(f'Number of rows: {bank_df.shape[0]}, Number of columns: {bank_df.shape[1]}')
-print(f'\nFirst 5 rows:\n{bank_df.head(5)}')
+print(f'Number of rows: {heart_df.shape[0]}, Number of columns: {heart_df.shape[1]}')
+print(f'\nFirst 5 rows:\n{heart_df.head(5)}')
 
 
 print('\n--- Column Information ---')
-print(bank_df.info())
+print(heart_df.info())
 
 print('\n--- Statistical Summary ---')
-print(bank_df.describe())
+print(heart_df.describe())
 
 
 print('\n--- Missing Values Check ---')
 print('Null values in each column:')
-print(bank_df.isnull().sum())
-print(f'\nTotal missing values: {bank_df.isnull().sum().sum()}')
+print(heart_df.isnull().sum())
+print(f'\nTotal missing values: {heart_df.isnull().sum().sum()}')
 
 # Check for duplicates
 print('\n--- Duplicate Check ---')
-print(f'Number of duplicate rows: {bank_df.duplicated().sum()}')
+print(f'Number of duplicate rows: {heart_df.duplicated().sum()}')
 
 # Value counts for categorical columns
 print('\n--- Categorical Features Distribution ---')
-print(f"\nTransactionType distribution:\n{bank_df['TransactionType'].value_counts()}")
-print(f"\nAccountID unique values: {bank_df['AccountID'].nunique()}")
+print(f"\nSex distribution:\n{heart_df['Sex'].value_counts()}")
+print(f"\nExerciseAngina unique values: {heart_df['ExerciseAngina'].nunique()}")
+print(f"\nChestPainType unique values: {heart_df['ChestPainType'].nunique()}")
+print(f"\nRestingECG unique values: {heart_df['RestingECG'].nunique()}")
+print(f"\nST_Slope unique values: {heart_df['ST_Slope'].nunique()}")
+
+# Checking number of 0 in Cholesterol and RestingBP
+
+zero_cholesterol_count = (heart_df['Cholesterol'] == 0).sum()
+print(f"There are {zero_cholesterol_count} rows with 0 cholesterol values.")
+
+zero_RBP_count = (heart_df['RestingBP'] == 0).sum()
+print(f"There are {zero_RBP_count} rows with 0 RBP values.")
+
+
 
 # ============================================================================
 # SECTION 2: DATA VISUALIZATION AND OUTLIER DETECTION
@@ -52,8 +65,8 @@ print("SECTION 2: DATA VISUALIZATION AND OUTLIER DETECTION")
 print("="*80)
 
 # Identify numerical and categorical columns
-num_cols = bank_df.select_dtypes(include=np.number).columns.tolist()
-cat_cols = bank_df.select_dtypes(include=['object']).columns.tolist()
+num_cols = heart_df.select_dtypes(include=np.number).columns.tolist()
+cat_cols = heart_df.select_dtypes(include=['object']).columns.tolist()
 
 print(f'\nNumerical columns ({len(num_cols)}): {num_cols}')
 print(f'Categorical columns ({len(cat_cols)}): {cat_cols}')
@@ -62,23 +75,53 @@ print(f'Categorical columns ({len(cat_cols)}): {cat_cols}')
 kurtosis=None   
 print('\n--- Kurtosis Analysis ---')
 for col in num_cols:
-    kurtosis = bank_df[col].kurtosis()
+    kurtosis = heart_df[col].kurtosis()
     print(f"{col:30s} → Kurtosis: {kurtosis:7.2f}")
     if kurtosis > 3:
         print(f"  → {col} has a leptokurtic distribution, we have more noise and outliers.")
 
+
+# Skewness analysis
+print('\n--- Skewness Analysis ---')
+for col in num_cols:
+    skewness = heart_df[col].skew()
+    print(f"{col:30s} → Skewness: {skewness:7.2f}")
+    
+    if skewness > 0.5:
+        print(f"  → {col} is positively skewed (right-skewed, long tail to the right).")
+    elif skewness < -0.5:
+        print(f"  → {col} is negatively skewed (left-skewed, long tail to the left).")
+    else:
+        print(f"  → {col} is approximately symmetric.")
+
 # Boxplots for numerical features (for outlier detection)
 print('\n--- Creating boxplots for outlier detection ---')
 # Uncomment to visualize:
-# bank_df[num_cols].boxplot(figsize=(12, 8))
+# heart_df[num_cols].boxplot(figsize=(12, 8))
 # plt.title('Boxplot of All Numerical Features')
 # plt.xticks(rotation=45)
 # plt.tight_layout()
 # plt.show()
 
+
+
+# Histograms for numerical features
+# -----------------------------------------------------------------------------
+print('\n--- Creating histograms for numerical features ---')
+for col in num_cols:
+    plt.figure(figsize=(6, 4))
+    sns.histplot(heart_df[col], kde=True, bins=20, color="steelblue")
+    plt.title(f"{col} Distribution")
+    plt.xlabel(col)
+    plt.ylabel("Frequency")
+    plt.tight_layout()
+    plt.show()
+
+
+
 # Correlation analysis
 print('\n--- Correlation Analysis ---')
-corr_matrix = bank_df[num_cols].corr() # Practical class 6
+corr_matrix = heart_df[num_cols].corr() # Practical class 6
 print('Correlation matrix:')
 print(corr_matrix)
 
@@ -97,34 +140,34 @@ print("SECTION 3: DATA CLEANING")
 print("="*80)
 
 
-bank_df_clean = bank_df.copy()
+heart_df_clean = heart_df.copy()
 print('\n--- 3.1: Handling Duplicates ---')
-duplicates_before = bank_df_clean.duplicated().sum()
-bank_df_clean.drop_duplicates(inplace=True) # Pandas method, class 4
+duplicates_before = heart_df_clean.duplicated().sum()
+heart_df_clean.drop_duplicates(inplace=True) # Pandas method, class 4
 print(f'Duplicates removed: {duplicates_before}')
-print(f'Rows remaining: {bank_df_clean.shape[0]}')
+print(f'Rows remaining: {heart_df_clean.shape[0]}')
 
 print('\n--- 3.2: Cleaning Column Names ---')
-bank_df_clean.columns = [col.strip().replace(' ', '_') for col in bank_df_clean.columns]
-print(f'Cleaned column names: {bank_df_clean.columns.tolist()}')
+heart_df_clean.columns = [col.strip().replace(' ', '_') for col in heart_df_clean.columns]
+print(f'Cleaned column names: {heart_df_clean.columns.tolist()}')
 
 print('\n--- 3.3: Missing Values Strategy ---')
-missing_summary = bank_df_clean.isnull().sum()
+missing_summary = heart_df_clean.isnull().sum()
 print('Missing values per column:')
 print(missing_summary[missing_summary > 0])
 
 
 print('\n--- Dropping columns with >80% missing values ---')
-missing_percentage = (bank_df_clean.isnull().sum() / len(bank_df_clean)) * 100
+missing_percentage = (heart_df_clean.isnull().sum() / len(heart_df_clean)) * 100
 cols_to_drop = missing_percentage[missing_percentage > 80].index.tolist()
 
 if cols_to_drop:
     print(f'Columns to drop (>80% missing): {cols_to_drop}')
     for col in cols_to_drop:
         print(f'  - {col}: {missing_percentage[col]:.2f}% missing')
-    bank_df_clean.drop(columns=cols_to_drop, inplace=True)
+    heart_df_clean.drop(columns=cols_to_drop, inplace=True)
     print(f'Dropped {len(cols_to_drop)} column(s)')
-    print(f'Remaining columns: {bank_df_clean.shape[1]}')
+    print(f'Remaining columns: {heart_df_clean.shape[1]}')
 else:
     print('No columns with >80% missing values found')
 
@@ -134,13 +177,13 @@ print('  - Categorical: most frequent imputation (via pipeline)')
 
 
 print('\n--- 3.4: Outlier Detection ---')
-for col in bank_df_clean.select_dtypes(include=np.number).columns:
-    Q1 = bank_df_clean[col].quantile(0.25)
-    Q3 = bank_df_clean[col].quantile(0.75)
+for col in heart_df_clean.select_dtypes(include=np.number).columns:
+    Q1 = heart_df_clean[col].quantile(0.25)
+    Q3 = heart_df_clean[col].quantile(0.75)
     IQR = Q3 - Q1
     lower_bound = Q1 - 1.5 * IQR
     upper_bound = Q3 + 1.5 * IQR
-    outliers = bank_df_clean[(bank_df_clean[col] < lower_bound) | (bank_df_clean[col] > upper_bound)][col]
+    outliers = heart_df_clean[(heart_df_clean[col] < lower_bound) | (heart_df_clean[col] > upper_bound)][col]
     print(f'{col:30s}: {len(outliers):5d} outliers detected (kept for now)')
 # Standard Scaler will reduce impact of outliers.
 
@@ -158,8 +201,8 @@ print(f'\n--- 5.1: Separating Features and Target ---')
 print(f'Target column: {target_column}')
 
 
-X = bank_df_clean.drop(target_column, axis=1)
-y = bank_df_clean[target_column]
+X = heart_df_clean.drop(target_column, axis=1)
+y = heart_df_clean[target_column]
 
 print(f'Features shape: {X.shape}')
 print(f'Target shape: {y.shape}')
@@ -217,9 +260,19 @@ print(f'\nMissing values in categorical features:\n{x_train_cat.isnull().sum()}'
 # SECTION 6: TRANSFORMATION PIPELINES
 # ============================================================================
 
+class ZeroCholesterolImputer(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        # Nothing to fit, since we're just replacing zeros
+        return self
 
+    def transform(self, X):
+        # Replace 0s in 'Cholesterol' column with NaN
+        X = X.copy()  # Don't modify the original DataFrame
+        X['Cholesterol'] = X['Cholesterol'].replace(0, np.nan)
+        return X
 
 numerical_transformer = Pipeline(steps=[
+    ('cholesterol_imputer', ZeroCholesterolImputer()),
     ('imputer', SimpleImputer(strategy='median')),  
     ('scaler', StandardScaler())
 ])
@@ -270,7 +323,5 @@ print(f'Original test shape: {X_test.shape}')
 print(f'Transformed test shape: {X_test_transformed.shape}')
 
 X_test_final = pd.DataFrame(X_test_transformed, columns=feature_names)
-
-
 
 
